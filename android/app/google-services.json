@@ -1,0 +1,29 @@
+{
+  "project_info": {
+    "project_number": "394188423373",
+    "project_id": "aptech-e-project-flutter",
+    "storage_bucket": "aptech-e-project-flutter.appspot.com"
+  },
+  "client": [
+    {
+      "client_info": {
+        "mobilesdk_app_id": "1:394188423373:android:609aed3c7e50ebe4472984",
+        "android_client_info": {
+          "package_name": "com.example.aptech_e_project_flutter"
+        }
+      },
+      "oauth_client": [],
+      "api_key": [
+        {
+          "current_key": "AIzaSyDgKuAR5VADuTWMGkeRmLf-QL0zwBk_X4c"
+        }
+      ],
+      "services": {
+        "appinvite_service": {
+          "other_platform_oauth_client": []
+        }
+      }
+    }
+  ],
+  "configuration_version": "1"
+}
