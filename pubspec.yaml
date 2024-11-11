@@ -54,6 +54,9 @@ dependencies:
   awesome_dialog: ^3.2.1
   awesome_bottom_bar: ^1.2.4
   uuid: ^4.5.1
+  flutter_product_card: ^0.0.7
+  carousel_slider: ^5.0.0
+  image_picker_for_web: ^3.0.5
 
 dev_dependencies:
   flutter_test:
@@ -80,6 +83,7 @@ flutter:
   assets:
     - assets/images/splash_image01.png
     - assets/images/library_image.png
+    - assets/images/book_image_01.jpg
 
 
   # An image asset can refer to one or more resolution-specific "variants", see
