@@ -1,6 +1,7 @@
 import 'package:flutter/material.dart';
 import 'package:firebase_auth/firebase_auth.dart';
 import 'package:cloud_firestore/cloud_firestore.dart';
+import 'package:google_sign_in/google_sign_in.dart';
 import 'package:aptech_e_project_flutter/HomePageindex.dart'; // Your Home Screen import
 import 'package:aptech_e_project_flutter/Admin/dashboard.dart';
 
@@ -24,13 +25,11 @@ class _LoginPageState extends State<LoginPage> {
       // Fetch user role from Firestore
       String uid = userCredential.user!.uid;
       DocumentSnapshot userDoc =
-          await FirebaseFirestore.instance.collection('users').doc(uid).get();
+      await FirebaseFirestore.instance.collection('users').doc(uid).get();
 
-      // Check if the document exists and contains the userRole field
       if (userDoc.exists && userDoc['userRole'] != null) {
         String userRole = userDoc['userRole'];
 
-        // Navigate based on user role
         if (userRole == "user") {
           Navigator.pushReplacement(
             context,
@@ -48,25 +47,69 @@ class _LoginPageState extends State<LoginPage> {
         throw Exception("User role not found in database");
       }
     } catch (e) {
-      print("Error: $e");
-      showDialog(
-        context: context,
-        builder: (context) {
-          return AlertDialog(
-            title: Text("Login Failed"),
-            content: Text(e.toString()),
-            actions: <Widget>[
-              TextButton(
-                child: Text("OK"),
-                onPressed: () {
-                  Navigator.of(context).pop();
-                },
-              ),
-            ],
-          );
-        },
-      );
+      _showErrorDialog(e.toString());
     }
+  }
+
+  Future<void> _signInWithGoogle() async {
+    try {
+      final GoogleSignInAccount? googleUser = await GoogleSignIn().signIn();
+      if (googleUser == null) return; // User canceled sign-in
+
+      final GoogleSignInAuthentication googleAuth = await googleUser.authentication;
+      final credential = GoogleAuthProvider.credential(
+        accessToken: googleAuth.accessToken,
+        idToken: googleAuth.idToken,
+      );
+
+      UserCredential userCredential = await _auth.signInWithCredential(credential);
+
+      String uid = userCredential.user!.uid;
+      DocumentSnapshot userDoc =
+      await FirebaseFirestore.instance.collection('users').doc(uid).get();
+
+      if (userDoc.exists && userDoc['userRole'] != null) {
+        String userRole = userDoc['userRole'];
+
+        if (userRole == "user") {
+          Navigator.pushReplacement(
+            context,
+            MaterialPageRoute(builder: (context) => HomeScreen()),
+          );
+        } else if (userRole == "admin") {
+          Navigator.pushReplacement(
+            context,
+            MaterialPageRoute(builder: (context) => DashboardPage()),
+          );
+        } else {
+          throw Exception("Unknown user role: $userRole");
+        }
+      } else {
+        throw Exception("User role not found in database");
+      }
+    } catch (e) {
+      _showErrorDialog(e.toString());
+    }
+  }
+
+  void _showErrorDialog(String message) {
+    showDialog(
+      context: context,
+      builder: (context) {
+        return AlertDialog(
+          title: Text("Login Failed"),
+          content: Text(message),
+          actions: <Widget>[
+            TextButton(
+              child: Text("OK"),
+              onPressed: () {
+                Navigator.of(context).pop();
+              },
+            ),
+          ],
+        );
+      },
+    );
   }
 
   Widget _backButton() {
@@ -77,20 +120,17 @@ class _LoginPageState extends State<LoginPage> {
       child: Row(
         children: <Widget>[
           Icon(Icons.keyboard_arrow_left, color: Colors.black),
-          Text('Back',
-              style: TextStyle(fontSize: 12, fontWeight: FontWeight.w500))
+          Text('Back', style: TextStyle(fontSize: 12, fontWeight: FontWeight.w500))
         ],
       ),
     );
   }
 
-  Widget _entryField(String title, TextEditingController controller,
-      {bool isPassword = false}) {
+  Widget _entryField(String title, TextEditingController controller, {bool isPassword = false}) {
     return Column(
       crossAxisAlignment: CrossAxisAlignment.start,
       children: <Widget>[
-        Text(title,
-            style: TextStyle(fontWeight: FontWeight.bold, fontSize: 15)),
+        Text(title, style: TextStyle(fontWeight: FontWeight.bold, fontSize: 15)),
         const SizedBox(height: 10),
         TextField(
           controller: controller,
@@ -118,8 +158,35 @@ class _LoginPageState extends State<LoginPage> {
                 begin: Alignment.centerLeft,
                 end: Alignment.centerRight,
                 colors: [Color(0xfffbb448), Color(0xfff7892b)])),
-        child: const Text('Login',
-            style: TextStyle(fontSize: 20, color: Colors.white)),
+        child: const Text('Login', style: TextStyle(fontSize: 20, color: Colors.white)),
+      ),
+    );
+  }
+
+  Widget _googleSignInButton() {
+    return InkWell(
+      onTap: _signInWithGoogle,
+      child: Container(
+        width: MediaQuery.of(context).size.width,
+        padding: const EdgeInsets.symmetric(vertical: 15),
+        alignment: Alignment.center,
+        decoration: BoxDecoration(
+          borderRadius: BorderRadius.all(Radius.circular(5)),
+          color: Colors.white,
+          border: Border.all(color: Colors.grey),
+        ),
+        child: Row(
+          mainAxisSize: MainAxisSize.min,
+          mainAxisAlignment: MainAxisAlignment.center,
+          children: <Widget>[
+            Image.asset('assets/images/google_logo.png', height: 24.0),
+            SizedBox(width: 10),
+            Text(
+              'Sign in with Google',
+              style: TextStyle(fontSize: 20, color: Colors.black54),
+            ),
+          ],
+        ),
       ),
     );
   }
@@ -149,21 +216,18 @@ class _LoginPageState extends State<LoginPage> {
                   mainAxisAlignment: MainAxisAlignment.center,
                   children: <Widget>[
                     SizedBox(height: height * .2),
-                    Text(
-                      "Login",
-                      style:
-                          TextStyle(fontSize: 30, fontWeight: FontWeight.bold),
-                    ),
+                    Text("Login", style: TextStyle(fontSize: 30, fontWeight: FontWeight.bold)),
                     SizedBox(height: 50),
                     _emailPasswordWidget(),
                     SizedBox(height: 20),
                     _submitButton(),
+                    SizedBox(height: 20),
+                    _googleSignInButton(),
                     Container(
                       padding: const EdgeInsets.symmetric(vertical: 10),
                       alignment: Alignment.centerRight,
                       child: const Text('Forgot Password?',
-                          style: TextStyle(
-                              fontSize: 14, fontWeight: FontWeight.w500)),
+                          style: TextStyle(fontSize: 14, fontWeight: FontWeight.w500)),
                     ),
                     SizedBox(height: height * .055),
                   ],

@@ -57,6 +57,7 @@ dependencies:
   flutter_product_card: ^0.0.7
   carousel_slider: ^5.0.0
   image_picker_for_web: ^3.0.5
+  google_sign_in: ^6.2.2
 
 dev_dependencies:
   flutter_test:
@@ -84,7 +85,7 @@ flutter:
     - assets/images/splash_image01.png
     - assets/images/library_image.png
     - assets/images/book_image_01.jpg
-
+    - assets/images/google_logo.png
 
   # An image asset can refer to one or more resolution-specific "variants", see
   # https://flutter.dev/assets-and-images/#resolution-aware
