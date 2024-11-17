@@ -15,7 +15,6 @@ class _HomeScreenState extends State<HomeScreen> {
   @override
   void initState() {
     super.initState();
-    // Listen to the auth state changes using 'authStateChanges()'
     _auth.authStateChanges().listen((user) {
       setState(() {
         _user = user;
@@ -23,7 +22,6 @@ class _HomeScreenState extends State<HomeScreen> {
     });
   }
 
-  // Function to logout
   Future<void> _logout() async {
     await _auth.signOut();
     Navigator.pushReplacement(
@@ -32,7 +30,6 @@ class _HomeScreenState extends State<HomeScreen> {
     );
   }
 
-  // Function to navigate to login screen if user is not logged in
   void _navigateToLogin() {
     Navigator.pushReplacement(
       context,
@@ -47,7 +44,6 @@ class _HomeScreenState extends State<HomeScreen> {
         title: Text("Book Store"),
         backgroundColor: Colors.grey[800],
         actions: [
-          // Show profile or login option based on user's authentication state
           PopupMenuButton(
             icon: CircleAvatar(
               backgroundColor: Colors.white,
@@ -62,22 +58,18 @@ class _HomeScreenState extends State<HomeScreen> {
             },
             itemBuilder: (context) {
               return [
-                // Show the user's email if logged in, otherwise show "Login"
                 PopupMenuItem(
-                  value: _user != null ? 'profile' : 'login', // Set value based on login state
+                  value: _user != null ? 'profile' : 'login',
                   child: Text(_user != null ? "Hello, ${_user!.email}" : "Login"),
                 ),
-                // Show the "Logout" option only if the user is logged in
                 if (_user != null)
                   PopupMenuItem(
-                    value: 'logout', // Set value as 'logout' for logout action
+                    value: 'logout',
                     child: Text("Logout"),
                   ),
               ];
             },
           ),
-
-
         ],
       ),
       body: SingleChildScrollView(
@@ -153,8 +145,22 @@ class BooksSection extends StatelessWidget {
                     .map(
                       (book) => ProductCard(
                     name: book['name'] ?? 'Unknown',
+                    desc:book['description']??'',
                     price: book['price'] ?? '0.0',
                     image: book['image'] ?? '',
+                    onTap: () {
+                      Navigator.push(
+                        context,
+                        MaterialPageRoute(
+                          builder: (context) => BookDetailsScreen(
+                            name: book['name'] ?? 'Unknown',
+                            desc:book['description']??'',
+                            price: book['price'] ?? '0.0',
+                            image: book['image'] ?? '',
+                          ),
+                        ),
+                      );
+                    },
                   ),
                 )
                     .toList(),
@@ -170,52 +176,158 @@ class BooksSection extends StatelessWidget {
 class ProductCard extends StatelessWidget {
   final String name;
   final String price;
+  final String desc;
   final String image;
+  final VoidCallback onTap;
 
-  const ProductCard({required this.name, required this.price, required this.image});
+  const ProductCard({
+    required this.name,
+    required this.desc,
+    required this.price,
+    required this.image,
+    required this.onTap,
+  });
 
   @override
   Widget build(BuildContext context) {
-    return Container(
-      width: 180,
-      padding: EdgeInsets.all(10),
-      margin: EdgeInsets.symmetric(horizontal: 5),
-      decoration: BoxDecoration(
-        color: Colors.white,
-        borderRadius: BorderRadius.circular(15),
-        border: Border.all(color: Colors.grey.shade300),
-        boxShadow: [
-          BoxShadow(
-            color: Colors.grey.withOpacity(0.3),
-            spreadRadius: 2,
-            blurRadius: 6,
-            offset: Offset(0, 3),
-          ),
-        ],
+    return GestureDetector(
+      onTap: onTap,
+      child: Container(
+        width: 180,
+        padding: EdgeInsets.all(10),
+        margin: EdgeInsets.symmetric(horizontal: 5),
+        decoration: BoxDecoration(
+          color: Colors.white,
+          borderRadius: BorderRadius.circular(15),
+          border: Border.all(color: Colors.grey.shade300),
+          boxShadow: [
+            BoxShadow(
+              color: Colors.grey.withOpacity(0.3),
+              spreadRadius: 2,
+              blurRadius: 6,
+              offset: Offset(0, 3),
+            ),
+          ],
+        ),
+        child: Column(
+          children: [
+            Image.network(
+              image,
+              height: 100,
+              width: 100,
+              fit: BoxFit.cover,
+              errorBuilder: (context, error, stackTrace) {
+                return Image.asset('assets/images/book_image_01.jpg',
+                    height: 100, width: 100, fit: BoxFit.cover);
+              },
+            ),
+            SizedBox(height: 10),
+            Text(
+              name,
+              style: TextStyle(
+                  fontSize: 18, fontWeight: FontWeight.bold, color: Colors.black),
+              textAlign: TextAlign.center,
+            ),
+            SizedBox(height: 5),
+            Text(
+              '\$$price',
+              style: TextStyle(
+                  fontSize: 16, color: Colors.green, fontWeight: FontWeight.w500),
+            ),
+          ],
+        ),
       ),
-      child: Column(
-        children: [
-          Image.network(
-            image,
-            height: 100,
-            width: 100,
-            fit: BoxFit.cover,
-            errorBuilder: (context, error, stackTrace) {
-              return Image.asset('assets/images/book_image_01.jpg', height: 100, width: 100, fit: BoxFit.cover);
-            },
-          ),
-          SizedBox(height: 10),
-          Text(
-            name,
-            style: TextStyle(fontSize: 18, fontWeight: FontWeight.bold, color: Colors.black),
-            textAlign: TextAlign.center,
-          ),
-          SizedBox(height: 5),
-          Text(
-            '\$$price',
-            style: TextStyle(fontSize: 16, color: Colors.green, fontWeight: FontWeight.w500),
-          ),
-        ],
+    );
+  }
+}
+
+class BookDetailsScreen extends StatelessWidget {
+  final String name;
+  final String desc;
+  final String price;
+  final String image;
+
+  const BookDetailsScreen({
+    required this.name,
+    required this.desc,
+    required this.price,
+    required this.image,
+  });
+
+  @override
+  Widget build(BuildContext context) {
+    return Scaffold(
+      appBar: AppBar(
+        title: Text(name),
+        backgroundColor: Colors.grey[800],
+      ),
+      body: Padding(
+        padding: const EdgeInsets.all(16.0),
+        child: Column(
+          crossAxisAlignment: CrossAxisAlignment.start,
+          children: [
+            Center(
+              child: Image.network(
+                image,
+                height: 200,
+                width: 200,
+                fit: BoxFit.cover,
+                errorBuilder: (context, error, stackTrace) {
+                  return Image.asset('assets/images/book_image_01.jpg',
+                      height: 200, width: 200, fit: BoxFit.cover);
+                },
+              ),
+            ),
+            SizedBox(height: 20),
+            Text(
+              name,
+              style: TextStyle(fontSize: 24, fontWeight: FontWeight.bold),
+            ),
+            SizedBox(height: 10),
+            Text(
+              '\$$price',
+              style: TextStyle(
+                  fontSize: 20, color: Colors.green, fontWeight: FontWeight.w600),
+            ),
+            SizedBox(height: 20),
+            Text(
+             desc,
+              style: TextStyle(fontSize: 16),
+            ),
+            Spacer(),
+            Row(
+              mainAxisAlignment: MainAxisAlignment.spaceEvenly,
+              children: [
+                ElevatedButton(
+                  onPressed: () {
+                    ScaffoldMessenger.of(context).showSnackBar(SnackBar(
+                      content: Text('$name added to cart'),
+                    ));
+                  },
+                  style: ElevatedButton.styleFrom(
+                    backgroundColor: Colors.orange, // Button color
+                    padding: EdgeInsets.symmetric(horizontal: 20, vertical: 10),
+                    textStyle: TextStyle(fontSize: 16),
+                  ),
+                  child: Text("Add to Cart"),
+                ),
+                ElevatedButton(
+                  onPressed: () {
+                    ScaffoldMessenger.of(context).showSnackBar(SnackBar(
+                      content: Text('Proceeding to buy $name'),
+                    ));
+                  },
+                  style: ElevatedButton.styleFrom(
+                    backgroundColor: Colors.green, // Button color
+                    padding: EdgeInsets.symmetric(horizontal: 20, vertical: 10),
+                    textStyle: TextStyle(fontSize: 16),
+                  ),
+                  child: Text("Buy Now"),
+                ),
+              ],
+            ),
+          ],
+        ),
       ),
     );
   }
