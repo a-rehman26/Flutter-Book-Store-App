@@ -1,3 +1,4 @@
+import 'package:aptech_e_project_flutter/Auth/welcomePage.dart';
 import 'package:flutter/material.dart';
 import 'package:firebase_auth/firebase_auth.dart';
 import 'package:cloud_firestore/cloud_firestore.dart';
@@ -111,20 +112,29 @@ class _LoginPageState extends State<LoginPage> {
       },
     );
   }
-
   Widget _backButton() {
     return InkWell(
       onTap: () {
-        Navigator.pop(context);
+        if (Navigator.canPop(context)) {
+          // Pop if a previous route exists
+          Navigator.pop(context);
+        } else {
+          // Navigate to WelcomePage if this is the root screen
+          Navigator.pushReplacement(
+            context,
+            MaterialPageRoute(builder: (context) => WelcomePage()), // Replace with your WelcomePage
+          );
+        }
       },
       child: Row(
         children: <Widget>[
           Icon(Icons.keyboard_arrow_left, color: Colors.black),
-          Text('Back', style: TextStyle(fontSize: 12, fontWeight: FontWeight.w500))
+          Text('Back', style: TextStyle(fontSize: 12, fontWeight: FontWeight.w500)),
         ],
       ),
     );
   }
+
 
   Widget _entryField(String title, TextEditingController controller, {bool isPassword = false}) {
     return Column(
