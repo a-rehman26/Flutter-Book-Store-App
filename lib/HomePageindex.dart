@@ -1,7 +1,5 @@
 import 'package:aptech_e_project_flutter/Auth/login.dart';
 import 'package:aptech_e_project_flutter/Auth/welcomePage.dart';
-// import 'package:aptech_e_project_flutter/cart_screen.dart';
-// import 'package:aptech_e_project_flutter/wishlist_screen.dart';
 import 'package:aptech_e_project_flutter/product_details.dart';
 import 'package:cloud_firestore/cloud_firestore.dart';
 import 'package:firebase_auth/firebase_auth.dart';
@@ -76,6 +74,64 @@ class _HomeScreenState extends State<HomeScreen> {
       MaterialPageRoute(builder: (context) => LoginPage()),
     );
   }
+
+
+  // Add to Wishlist
+  void _addToWishlist(BuildContext context, String bookId) async {
+    final userId = FirebaseAuth.instance.currentUser?.uid;
+    if (userId == null) {
+      // Show a message that the user needs to log in
+      ScaffoldMessenger.of(context).showSnackBar(SnackBar(
+        content: Text("Please log in to add to Wishlist."),
+      ));
+    } else {
+      // Add to wishlist if user is logged in
+      try {
+        await FirebaseFirestore.instance
+            .collection('users')
+            .doc(userId)
+            .collection('wishlist')
+            .doc(bookId)
+            .set({
+          'bookId': bookId,
+          'addedAt': Timestamp.now(),
+        });
+        ScaffoldMessenger.of(context).showSnackBar(SnackBar(content: Text("Added to Wishlist")));
+      } catch (e) {
+        print("Error adding to wishlist: $e");
+        ScaffoldMessenger.of(context).showSnackBar(SnackBar(content: Text("Failed to add to Wishlist")));
+      }
+    }
+  }
+
+// Add to Cart
+  void _addToCart(BuildContext context, String bookId) async {
+    final userId = FirebaseAuth.instance.currentUser?.uid;
+    if (userId == null) {
+      // Show a message that the user needs to log in
+      ScaffoldMessenger.of(context).showSnackBar(SnackBar(
+        content: Text("Please log in to add to Cart."),
+      ));
+    } else {
+      // Add to cart if user is logged in
+      try {
+        await FirebaseFirestore.instance
+            .collection('users')
+            .doc(userId)
+            .collection('cart')
+            .doc(bookId)
+            .set({
+          'bookId': bookId,
+          'addedAt': Timestamp.now(),
+        });
+        ScaffoldMessenger.of(context).showSnackBar(SnackBar(content: Text("Added to Cart")));
+      } catch (e) {
+        print("Error adding to cart: $e");
+        ScaffoldMessenger.of(context).showSnackBar(SnackBar(content: Text("Failed to add to Cart")));
+      }
+    }
+  }
+
 
   @override
   Widget build(BuildContext context) {
@@ -172,7 +228,7 @@ class _HomeScreenState extends State<HomeScreen> {
                     // Navigate to Wishlist screen
                     Navigator.push(
                       context,
-                      MaterialPageRoute(builder: (context) => HomeScreen()),
+                      MaterialPageRoute(builder: (context) => WishlistScreen()),
                     );
                   },
                 ),
@@ -186,10 +242,10 @@ class _HomeScreenState extends State<HomeScreen> {
           crossAxisAlignment: CrossAxisAlignment.start,
           children: [
             SectionHeader(title: "Popular Books"),
-            BooksSection(category: "Popular Book"),
+            BooksSection(category: "Popular Book", addToWishlist: _addToWishlist, addToCart: _addToCart),
             SizedBox(height: 20),
             SectionHeader(title: "Latest Books/New Arrival"),
-            BooksSection(category: "Latest Books/New Arrival"),
+            BooksSection(category: "Latest Books/New Arrival", addToWishlist: _addToWishlist, addToCart: _addToCart),
           ],
         ),
       ),
@@ -206,144 +262,96 @@ class _HomeScreenState extends State<HomeScreen> {
 class ProductCard extends StatelessWidget {
   final String name;
   final String price;
-  final String? image;  // Make this nullable, as it can be null if image URL is not available
+  final String? image;
   final String bookId;
+  final String desc;
+  final Function(BuildContext, String) addToWishlist;
+  final Function(BuildContext, String) addToCart;
 
   const ProductCard({
     required this.name,
     required this.price,
-    this.image,  // Image URL or null
+    this.image,
     required this.bookId,
+    required this.desc,
+    required this.addToWishlist,
+    required this.addToCart,
   });
-
-  Future<void> _addToWishlist(BuildContext context) async {
-    final userId = FirebaseAuth.instance.currentUser?.uid;
-
-    if (userId == null) {
-      ScaffoldMessenger.of(context).showSnackBar(
-        const SnackBar(content: Text("Please log in to add items to wishlist")),
-      );
-      return;
-    }
-
-    try {
-      await FirebaseFirestore.instance
-          .collection('users')
-          .doc(userId)
-          .collection('wishlist')
-          .doc(bookId)
-          .set({
-        'bookId': bookId,
-        'name': name,
-        'price': price,
-        'image': image ?? 'assets/book_image_01.jpg',  // Fallback to local image if null
-        'addedAt': Timestamp.now(),
-      });
-
-      ScaffoldMessenger.of(context).showSnackBar(
-        SnackBar(content: Text("$name added to wishlist")),
-      );
-    } catch (e) {
-      ScaffoldMessenger.of(context).showSnackBar(
-        SnackBar(content: Text("Error adding to wishlist: $e")),
-      );
-    }
-  }
-
-  Future<void> _addToCart(BuildContext context) async {
-    final userId = FirebaseAuth.instance.currentUser?.uid;
-
-    if (userId == null) {
-      ScaffoldMessenger.of(context).showSnackBar(
-        const SnackBar(content: Text("Please log in to add items to cart")),
-      );
-      return;
-    }
-
-    try {
-      await FirebaseFirestore.instance
-          .collection('users')
-          .doc(userId)
-          .collection('cart')
-          .doc(bookId)
-          .set({
-        'bookId': bookId,
-        'name': name,
-        'price': price,
-        'image': image ?? 'assets/book_image_01.jpg',  // Fallback to local image if null
-        'addedAt': Timestamp.now(),
-      });
-
-      ScaffoldMessenger.of(context).showSnackBar(
-        SnackBar(content: Text("$name added to cart")),
-      );
-    } catch (e) {
-      ScaffoldMessenger.of(context).showSnackBar(
-        SnackBar(content: Text("Error adding to cart: $e")),
-      );
-    }
-  }
 
   @override
   Widget build(BuildContext context) {
-    // Use network image if available, otherwise use local asset image
     final displayImage = (image != null && image!.isNotEmpty)
-        ? Image.network(image!, height: 120, width: 120, fit: BoxFit.cover)  // Set fixed height and width
-        : Image.asset('assets/images/book_image_01.jpg', height: 120, width: 120, fit: BoxFit.cover);  // Fallback to local asset image
+        ? Image.network(image!, fit: BoxFit.cover)
+        : Image.asset('assets/images/book_image_01.jpg', fit: BoxFit.cover);
 
     return GestureDetector(
       onTap: () {
-        // Navigate to book details screen or handle any other action
+        Navigator.push(
+          context,
+          MaterialPageRoute(
+            builder: (context) => BookDetailsScreen(
+              name: name,
+              price: price,
+              image: image ?? 'assets/images/book_image_01.jpg',
+              bookId: bookId,
+              desc: desc,
+            ),
+          ),
+        );
       },
       child: Container(
-        width: 180,
-        padding: EdgeInsets.all(10),
+        width: 150, // Reduced width to make the cards smaller
+        padding: EdgeInsets.all(8), // Reduced padding
         margin: EdgeInsets.symmetric(horizontal: 5),
         decoration: BoxDecoration(
           color: Colors.white,
-          borderRadius: BorderRadius.circular(15),
+          borderRadius: BorderRadius.circular(10), // Slightly reduced border radius
           border: Border.all(color: Colors.grey.shade300),
           boxShadow: [
             BoxShadow(
-              color: Colors.grey.withOpacity(0.3),
+              color: Colors.grey.withOpacity(0.2), // Lighter shadow for subtle effect
               spreadRadius: 2,
-              blurRadius: 5,
-              offset: Offset(0, 3),
+              blurRadius: 4,
+              offset: Offset(0, 2),
             ),
           ],
         ),
         child: Column(
-          mainAxisSize: MainAxisSize.min, // Ensures the column doesn't take up too much space
+          crossAxisAlignment: CrossAxisAlignment.start,
           children: [
-            // Image Section
-            displayImage,
-            SizedBox(height: 10),
-
-            // Name and Price Section
+            Flexible(
+              flex: 2,
+              child: ClipRRect(
+                borderRadius: BorderRadius.circular(10), // Rounded corners for image
+                child: displayImage,
+              ),
+            ),
+            SizedBox(height: 8),
             Text(
               name,
-              maxLines: 1,
-              overflow: TextOverflow.ellipsis,
-              style: TextStyle(fontWeight: FontWeight.bold),
+              style: TextStyle(fontSize: 13, fontWeight: FontWeight.bold),
+              overflow: TextOverflow.ellipsis, // Avoid overflow if the text is too long
             ),
-            SizedBox(height: 5),
+            SizedBox(height: 4),
             Text(
-              "\$$price",
-              style: TextStyle(fontWeight: FontWeight.bold),
+              '\$ $price',
+              style: TextStyle(fontSize: 12, color: Colors.red),
             ),
-            SizedBox(height: 10),
-
-            // Action Buttons Section
+            SizedBox(height: 8),
             Row(
-              mainAxisAlignment: MainAxisAlignment.spaceBetween,
+              mainAxisAlignment: MainAxisAlignment.spaceBetween, // Spaced buttons
               children: [
                 IconButton(
-                  icon: Icon(Icons.favorite_border),
-                  onPressed: () => _addToWishlist(context),
+                  icon: Icon(Icons.favorite_border, color: Colors.red),
+                  onPressed: () {
+                    addToWishlist(context, bookId);
+                  },
                 ),
                 IconButton(
-                  icon: Icon(Icons.shopping_cart),
-                  onPressed: () => _addToCart(context),
+                  icon: Icon(Icons.shopping_cart_outlined, color: Colors.blue),
+                  onPressed: () {
+                    addToCart(context, bookId);
+                  },
                 ),
               ],
             ),
@@ -354,7 +362,6 @@ class ProductCard extends StatelessWidget {
   }
 }
 
-
 class SectionHeader extends StatelessWidget {
   final String title;
 
@@ -363,10 +370,10 @@ class SectionHeader extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     return Padding(
-      padding: const EdgeInsets.symmetric(horizontal: 20, vertical: 10),
+      padding: const EdgeInsets.all(10.0),
       child: Text(
         title,
-        style: TextStyle(fontSize: 18, fontWeight: FontWeight.bold),
+        style: TextStyle(fontSize: 20, fontWeight: FontWeight.bold),
       ),
     );
   }
@@ -374,8 +381,14 @@ class SectionHeader extends StatelessWidget {
 
 class BooksSection extends StatelessWidget {
   final String category;
+  final Function(BuildContext, String) addToWishlist;
+  final Function(BuildContext, String) addToCart;
 
-  const BooksSection({required this.category});
+  const BooksSection({
+    required this.category,
+    required this.addToWishlist,
+    required this.addToCart,
+  });
 
   @override
   Widget build(BuildContext context) {
@@ -388,27 +401,36 @@ class BooksSection extends StatelessWidget {
         if (snapshot.connectionState == ConnectionState.waiting) {
           return Center(child: CircularProgressIndicator());
         }
-
         if (!snapshot.hasData || snapshot.data!.docs.isEmpty) {
-          return Center(child: Text("No books found"));
+          return Center(child: Text("No books available"));
         }
 
+        final books = snapshot.data!.docs;
         return GridView.builder(
           shrinkWrap: true,
           physics: NeverScrollableScrollPhysics(),
           gridDelegate: SliverGridDelegateWithFixedCrossAxisCount(
             crossAxisCount: 2,
-            crossAxisSpacing: 10,
-            mainAxisSpacing: 10,
+            childAspectRatio: 0.6,
           ),
-          itemCount: snapshot.data!.docs.length,
+          itemCount: books.length,
           itemBuilder: (context, index) {
-            final book = snapshot.data!.docs[index];
+            final book = books[index];
+            final bookId = book.id;
+            final bookData = book.data() as Map<String, dynamic>;
+            final name = bookData['name'] ?? 'No Title';
+            final price = bookData['price'] ?? 'No Price';
+            final image = bookData['image'] ?? '';
+            final desc = bookData['description'] ?? 'No Description';
+
             return ProductCard(
-              name: book['name'],
-              price: book['price'],
-              image: book['image'],
-              bookId: book.id,
+              name: name,
+              price: price,
+              image: image,
+              bookId: bookId,
+              desc: desc,
+              addToWishlist: addToWishlist,
+              addToCart: addToCart,
             );
           },
         );

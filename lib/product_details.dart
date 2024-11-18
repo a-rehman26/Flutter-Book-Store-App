@@ -89,7 +89,6 @@ class BookDetailsScreen extends StatelessWidget {
   }
 }
 
-
 class CartScreen extends StatefulWidget {
   @override
   _CartScreenState createState() => _CartScreenState();
@@ -129,10 +128,30 @@ class _CartScreenState extends State<CartScreen> {
         itemCount: cartItems.length,
         itemBuilder: (context, index) {
           final cartItem = cartItems[index];
+
+          // Determine image to display
+          final imageUrl = cartItem['image'] ?? '';
+          final imageWidget = (imageUrl.isNotEmpty)
+              ? Image.network(
+            imageUrl,
+            width: 50,
+            height: 50,
+            fit: BoxFit.cover,
+          )
+              : Image.asset(
+            'assets/images/book_image_01.jpg',
+            width: 50,
+            height: 50,
+            fit: BoxFit.cover,
+          );
+
           return ListTile(
             title: Text(cartItem['name']),
             subtitle: Text('\$${cartItem['price']}'),
-            leading: Image.network(cartItem['image'], width: 50),
+            leading: ClipRRect(
+              borderRadius: BorderRadius.circular(8),
+              child: imageWidget,
+            ),
             trailing: IconButton(
               icon: Icon(Icons.remove_circle, color: Colors.red),
               onPressed: () async {
@@ -146,6 +165,156 @@ class _CartScreenState extends State<CartScreen> {
                 _fetchCartItems(); // Refresh the cart
               },
             ),
+          );
+        },
+      ),
+    );
+  }
+}
+
+class BookListScreen extends StatelessWidget {
+  final String name;
+  final String price;
+  final String image;
+  final String bookId;
+  final String desc; // Description field from the Firestore document
+
+  BookListScreen({
+    required this.name,
+    required this.price,
+    required this.image,
+    required this.bookId,
+    required this.desc,
+  });
+
+  @override
+  Widget build(BuildContext context) {
+    return GestureDetector(
+      onTap: () {
+        Navigator.push(
+          context,
+          MaterialPageRoute(
+            builder: (context) => BookDetailsScreen(
+              name: name,
+              price: price,
+              image: image ?? 'assets/images/book_image_01.jpg',
+              bookId: bookId,
+              desc: desc, // Passing the description
+            ),
+          ),
+        );
+      },
+      child: Card(
+        child: Column(
+          children: [
+            Image.network(image),
+            Text(name),
+            Text('\$$price'),
+          ],
+        ),
+      ),
+    );
+  }
+}
+
+
+class WishlistScreen extends StatefulWidget {
+  @override
+  _WishlistScreenState createState() => _WishlistScreenState();
+}
+
+class _WishlistScreenState extends State<WishlistScreen> {
+  final FirebaseAuth _auth = FirebaseAuth.instance;
+  User? _user;
+
+  @override
+  void initState() {
+    super.initState();
+    _auth.authStateChanges().listen((user) {
+      setState(() {
+        _user = user;
+      });
+    });
+  }
+
+  // Remove item from wishlist
+  Future<void> _removeFromWishlist(String bookId) async {
+    final userId = FirebaseAuth.instance.currentUser?.uid;
+    if (userId != null) {
+      try {
+        await FirebaseFirestore.instance
+            .collection('users')
+            .doc(userId)
+            .collection('wishlist')
+            .doc(bookId)
+            .delete();
+
+        ScaffoldMessenger.of(context).showSnackBar(SnackBar(content: Text("Removed from Wishlist")));
+      } catch (e) {
+        print("Error removing from wishlist: $e");
+        ScaffoldMessenger.of(context).showSnackBar(SnackBar(content: Text("Failed to remove from Wishlist")));
+      }
+    }
+  }
+
+  @override
+  Widget build(BuildContext context) {
+    return Scaffold(
+      appBar: AppBar(
+        title: Text('My Wishlist'),
+        backgroundColor: Colors.grey[800],
+      ),
+      body: _user == null
+          ? Center(child: Text("Please log in to view your wishlist"))
+          : FutureBuilder<QuerySnapshot>(
+        future: FirebaseFirestore.instance
+            .collection('users')
+            .doc(_user!.uid)
+            .collection('wishlist')
+            .get(),
+        builder: (context, snapshot) {
+          if (snapshot.connectionState == ConnectionState.waiting) {
+            return Center(child: CircularProgressIndicator());
+          }
+
+          if (!snapshot.hasData || snapshot.data!.docs.isEmpty) {
+            return Center(child: Text("Your wishlist is empty"));
+          }
+
+          return ListView.builder(
+            itemCount: snapshot.data!.docs.length,
+            itemBuilder: (context, index) {
+              final book = snapshot.data!.docs[index];
+              final bookId = book['bookId'];
+              final bookName = book['name'] ?? 'No name';
+              final bookPrice = book['price'] ?? 'No price';
+              final bookImage = book['image'] ?? 'assets/images/book_image_01.jpg';
+
+              return ListTile(
+                leading: Image.network(bookImage, width: 50, height: 50, fit: BoxFit.cover),
+                title: Text(bookName),
+                subtitle: Text("\$$bookPrice"),
+                trailing: IconButton(
+                  icon: Icon(Icons.remove_circle, color: Colors.red),
+                  onPressed: () => _removeFromWishlist(bookId),
+                ),
+                onTap: () {
+                  // Navigate to book details page
+                  Navigator.push(
+                    context,
+                    MaterialPageRoute(
+                      builder: (context) => BookDetailsScreen(
+                        name: bookName,
+                        price: bookPrice,
+                        image: bookImage,
+                        bookId: bookId,
+                        desc: book['description'] ?? '',
+                      ),
+                    ),
+                  );
+                },
+              );
+            },
           );
         },
       ),
