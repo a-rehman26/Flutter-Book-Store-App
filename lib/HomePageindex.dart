@@ -1,7 +1,11 @@
 import 'package:aptech_e_project_flutter/Auth/login.dart';
-import 'package:flutter/material.dart';
-import 'package:firebase_auth/firebase_auth.dart';
+import 'package:aptech_e_project_flutter/Auth/welcomePage.dart';
+// import 'package:aptech_e_project_flutter/cart_screen.dart';
+// import 'package:aptech_e_project_flutter/wishlist_screen.dart';
+import 'package:aptech_e_project_flutter/product_details.dart';
 import 'package:cloud_firestore/cloud_firestore.dart';
+import 'package:firebase_auth/firebase_auth.dart';
+import 'package:flutter/material.dart';
 
 class HomeScreen extends StatefulWidget {
   @override
@@ -11,6 +15,8 @@ class HomeScreen extends StatefulWidget {
 class _HomeScreenState extends State<HomeScreen> {
   final FirebaseAuth _auth = FirebaseAuth.instance;
   User? _user;
+  int _cartCount = 0;
+  int _wishlistCount = 0;
 
   @override
   void initState() {
@@ -20,16 +26,50 @@ class _HomeScreenState extends State<HomeScreen> {
         _user = user;
       });
     });
+    _getCartCount();
+    _getWishlistCount();
   }
 
+  // Get the count of items in the cart
+  Future<void> _getCartCount() async {
+    final userId = FirebaseAuth.instance.currentUser?.uid;
+    if (userId != null) {
+      final cartSnapshot = await FirebaseFirestore.instance
+          .collection('users')
+          .doc(userId)
+          .collection('cart')
+          .get();
+      setState(() {
+        _cartCount = cartSnapshot.docs.length;
+      });
+    }
+  }
+
+  // Get the count of items in the wishlist
+  Future<void> _getWishlistCount() async {
+    final userId = FirebaseAuth.instance.currentUser?.uid;
+    if (userId != null) {
+      final wishlistSnapshot = await FirebaseFirestore.instance
+          .collection('users')
+          .doc(userId)
+          .collection('wishlist')
+          .get();
+      setState(() {
+        _wishlistCount = wishlistSnapshot.docs.length;
+      });
+    }
+  }
+
+  // Log out the user
   Future<void> _logout() async {
     await _auth.signOut();
     Navigator.pushReplacement(
       context,
-      MaterialPageRoute(builder: (context) => LoginPage()),
+      MaterialPageRoute(builder: (context) => WelcomePage()),
     );
   }
 
+  // Navigate to LoginPage
   void _navigateToLogin() {
     Navigator.pushReplacement(
       context,
@@ -41,36 +81,105 @@ class _HomeScreenState extends State<HomeScreen> {
   Widget build(BuildContext context) {
     return Scaffold(
       appBar: AppBar(
-        title: Text("Book Store"),
         backgroundColor: Colors.grey[800],
-        actions: [
-          PopupMenuButton(
-            icon: CircleAvatar(
-              backgroundColor: Colors.white,
-              child: Icon(Icons.account_circle, color: Colors.black),
-            ),
-            onSelected: (value) {
-              if (value == 'logout') {
-                _logout();
-              } else if (value == 'login') {
-                _navigateToLogin();
-              }
-            },
-            itemBuilder: (context) {
-              return [
-                PopupMenuItem(
-                  value: _user != null ? 'profile' : 'login',
-                  child: Text(_user != null ? "Hello, ${_user!.email}" : "Login"),
-                ),
-                if (_user != null)
-                  PopupMenuItem(
-                    value: 'logout',
-                    child: Text("Logout"),
+        title: Row(
+          mainAxisAlignment: MainAxisAlignment.spaceBetween,
+          children: [
+            const Text("Book Store", style: TextStyle(color: Colors.white)),
+            Row(
+              children: [
+                CircleAvatar(
+                  backgroundColor: Colors.white,
+                  child: PopupMenuButton(
+                    icon: const Icon(Icons.account_circle, color: Colors.black),
+                    onSelected: (value) {
+                      if (value == 'logout') {
+                        _logout();
+                      } else if (value == 'login') {
+                        _navigateToLogin();
+                      }
+                    },
+                    itemBuilder: (context) {
+                      return [
+                        PopupMenuItem(
+                          value: _user != null ? 'profile' : 'login',
+                          child: Text(
+                            _user != null
+                                ? "Hello, ${_user!.email?.split('@')[0]}"
+                                : "Login",
+                          ),
+                        ),
+                        if (_user != null)
+                          const PopupMenuItem(
+                            value: 'logout',
+                            child: Text("Logout"),
+                          ),
+                      ];
+                    },
                   ),
-              ];
-            },
-          ),
-        ],
+                ),
+                const SizedBox(width: 10),
+                // Cart Icon
+                IconButton(
+                  icon: Stack(
+                    children: [
+                      const Icon(Icons.shopping_cart, color: Colors.white),
+                      if (_cartCount > 0)
+                        Positioned(
+                          top: 0,
+                          right: 0,
+                          child: CircleAvatar(
+                            radius: 10,
+                            backgroundColor: Colors.red,
+                            child: Text(
+                              _cartCount.toString(),
+                              style: TextStyle(fontSize: 12, color: Colors.white),
+                            ),
+                          ),
+                        ),
+                    ],
+                  ),
+                  onPressed: () {
+                    // Navigate to Cart screen
+                    Navigator.push(
+                      context,
+                      MaterialPageRoute(builder: (context) => CartScreen()),
+                    );
+                  },
+                ),
+                const SizedBox(width: 10),
+                // Wishlist Icon
+                IconButton(
+                  icon: Stack(
+                    children: [
+                      const Icon(Icons.favorite, color: Colors.white),
+                      if (_wishlistCount > 0)
+                        Positioned(
+                          top: 0,
+                          right: 0,
+                          child: CircleAvatar(
+                            radius: 10,
+                            backgroundColor: Colors.red,
+                            child: Text(
+                              _wishlistCount.toString(),
+                              style: TextStyle(fontSize: 12, color: Colors.white),
+                            ),
+                          ),
+                        ),
+                    ],
+                  ),
+                  onPressed: () {
+                    // Navigate to Wishlist screen
+                    Navigator.push(
+                      context,
+                      MaterialPageRoute(builder: (context) => HomeScreen()),
+                    );
+                  },
+                ),
+              ],
+            ),
+          ],
+        ),
       ),
       body: SingleChildScrollView(
         child: Column(
@@ -94,104 +203,98 @@ class _HomeScreenState extends State<HomeScreen> {
   }
 }
 
-class SectionHeader extends StatelessWidget {
-  final String title;
-
-  const SectionHeader({required this.title});
-
-  @override
-  Widget build(BuildContext context) {
-    return Padding(
-      padding: const EdgeInsets.all(16.0),
-      child: Text(
-        title,
-        style: TextStyle(fontSize: 20, fontWeight: FontWeight.bold),
-      ),
-    );
-  }
-}
-
-class BooksSection extends StatelessWidget {
-  final String category;
-
-  const BooksSection({required this.category});
-
-  @override
-  Widget build(BuildContext context) {
-    return StreamBuilder<QuerySnapshot>(
-      stream: FirebaseFirestore.instance
-          .collection('books')
-          .where('category', isEqualTo: category)
-          .snapshots(),
-      builder: (context, snapshot) {
-        if (snapshot.connectionState == ConnectionState.waiting) {
-          return Center(child: CircularProgressIndicator());
-        }
-        if (!snapshot.hasData || snapshot.data!.docs.isEmpty) {
-          return Center(child: Text('No books found in this category'));
-        }
-        final books = snapshot.data!.docs;
-
-        return Container(
-          height: 250,
-          child: PageView.builder(
-            itemCount: (books.length / 2).ceil(),
-            itemBuilder: (context, index) {
-              return Row(
-                mainAxisAlignment: MainAxisAlignment.spaceEvenly,
-                children: books
-                    .skip(index * 2)
-                    .take(2)
-                    .map(
-                      (book) => ProductCard(
-                    name: book['name'] ?? 'Unknown',
-                    desc:book['description']??'',
-                    price: book['price'] ?? '0.0',
-                    image: book['image'] ?? '',
-                    onTap: () {
-                      Navigator.push(
-                        context,
-                        MaterialPageRoute(
-                          builder: (context) => BookDetailsScreen(
-                            name: book['name'] ?? 'Unknown',
-                            desc:book['description']??'',
-                            price: book['price'] ?? '0.0',
-                            image: book['image'] ?? '',
-                          ),
-                        ),
-                      );
-                    },
-                  ),
-                )
-                    .toList(),
-              );
-            },
-          ),
-        );
-      },
-    );
-  }
-}
-
 class ProductCard extends StatelessWidget {
   final String name;
   final String price;
-  final String desc;
-  final String image;
-  final VoidCallback onTap;
+  final String? image;  // Make this nullable, as it can be null if image URL is not available
+  final String bookId;
 
   const ProductCard({
     required this.name,
-    required this.desc,
     required this.price,
-    required this.image,
-    required this.onTap,
+    this.image,  // Image URL or null
+    required this.bookId,
   });
+
+  Future<void> _addToWishlist(BuildContext context) async {
+    final userId = FirebaseAuth.instance.currentUser?.uid;
+
+    if (userId == null) {
+      ScaffoldMessenger.of(context).showSnackBar(
+        const SnackBar(content: Text("Please log in to add items to wishlist")),
+      );
+      return;
+    }
+
+    try {
+      await FirebaseFirestore.instance
+          .collection('users')
+          .doc(userId)
+          .collection('wishlist')
+          .doc(bookId)
+          .set({
+        'bookId': bookId,
+        'name': name,
+        'price': price,
+        'image': image ?? 'assets/book_image_01.jpg',  // Fallback to local image if null
+        'addedAt': Timestamp.now(),
+      });
+
+      ScaffoldMessenger.of(context).showSnackBar(
+        SnackBar(content: Text("$name added to wishlist")),
+      );
+    } catch (e) {
+      ScaffoldMessenger.of(context).showSnackBar(
+        SnackBar(content: Text("Error adding to wishlist: $e")),
+      );
+    }
+  }
+
+  Future<void> _addToCart(BuildContext context) async {
+    final userId = FirebaseAuth.instance.currentUser?.uid;
+
+    if (userId == null) {
+      ScaffoldMessenger.of(context).showSnackBar(
+        const SnackBar(content: Text("Please log in to add items to cart")),
+      );
+      return;
+    }
+
+    try {
+      await FirebaseFirestore.instance
+          .collection('users')
+          .doc(userId)
+          .collection('cart')
+          .doc(bookId)
+          .set({
+        'bookId': bookId,
+        'name': name,
+        'price': price,
+        'image': image ?? 'assets/book_image_01.jpg',  // Fallback to local image if null
+        'addedAt': Timestamp.now(),
+      });
+
+      ScaffoldMessenger.of(context).showSnackBar(
+        SnackBar(content: Text("$name added to cart")),
+      );
+    } catch (e) {
+      ScaffoldMessenger.of(context).showSnackBar(
+        SnackBar(content: Text("Error adding to cart: $e")),
+      );
+    }
+  }
 
   @override
   Widget build(BuildContext context) {
+    // Use network image if available, otherwise use local asset image
+    final displayImage = (image != null && image!.isNotEmpty)
+        ? Image.network(image!, height: 120, width: 120, fit: BoxFit.cover)  // Set fixed height and width
+        : Image.asset('assets/images/book_image_01.jpg', height: 120, width: 120, fit: BoxFit.cover);  // Fallback to local asset image
+
     return GestureDetector(
-      onTap: onTap,
+      onTap: () {
+        // Navigate to book details screen or handle any other action
+      },
       child: Container(
         width: 180,
         padding: EdgeInsets.all(10),
@@ -204,35 +307,45 @@ class ProductCard extends StatelessWidget {
             BoxShadow(
               color: Colors.grey.withOpacity(0.3),
               spreadRadius: 2,
-              blurRadius: 6,
+              blurRadius: 5,
               offset: Offset(0, 3),
             ),
           ],
         ),
         child: Column(
+          mainAxisSize: MainAxisSize.min, // Ensures the column doesn't take up too much space
           children: [
-            Image.network(
-              image,
-              height: 100,
-              width: 100,
-              fit: BoxFit.cover,
-              errorBuilder: (context, error, stackTrace) {
-                return Image.asset('assets/images/book_image_01.jpg',
-                    height: 100, width: 100, fit: BoxFit.cover);
-              },
-            ),
+            // Image Section
+            displayImage,
             SizedBox(height: 10),
+
+            // Name and Price Section
             Text(
               name,
-              style: TextStyle(
-                  fontSize: 18, fontWeight: FontWeight.bold, color: Colors.black),
-              textAlign: TextAlign.center,
+              maxLines: 1,
+              overflow: TextOverflow.ellipsis,
+              style: TextStyle(fontWeight: FontWeight.bold),
             ),
             SizedBox(height: 5),
             Text(
-              '\$$price',
-              style: TextStyle(
-                  fontSize: 16, color: Colors.green, fontWeight: FontWeight.w500),
+              "\$$price",
+              style: TextStyle(fontWeight: FontWeight.bold),
+            ),
+            SizedBox(height: 10),
+
+            // Action Buttons Section
+            Row(
+              mainAxisAlignment: MainAxisAlignment.spaceBetween,
+              children: [
+                IconButton(
+                  icon: Icon(Icons.favorite_border),
+                  onPressed: () => _addToWishlist(context),
+                ),
+                IconButton(
+                  icon: Icon(Icons.shopping_cart),
+                  onPressed: () => _addToCart(context),
+                ),
+              ],
             ),
           ],
         ),
@@ -241,94 +354,65 @@ class ProductCard extends StatelessWidget {
   }
 }
 
-class BookDetailsScreen extends StatelessWidget {
-  final String name;
-  final String desc;
-  final String price;
-  final String image;
 
-  const BookDetailsScreen({
-    required this.name,
-    required this.desc,
-    required this.price,
-    required this.image,
-  });
+class SectionHeader extends StatelessWidget {
+  final String title;
+
+  const SectionHeader({required this.title});
 
   @override
   Widget build(BuildContext context) {
-    return Scaffold(
-      appBar: AppBar(
-        title: Text(name),
-        backgroundColor: Colors.grey[800],
+    return Padding(
+      padding: const EdgeInsets.symmetric(horizontal: 20, vertical: 10),
+      child: Text(
+        title,
+        style: TextStyle(fontSize: 18, fontWeight: FontWeight.bold),
       ),
-      body: Padding(
-        padding: const EdgeInsets.all(16.0),
-        child: Column(
-          crossAxisAlignment: CrossAxisAlignment.start,
-          children: [
-            Center(
-              child: Image.network(
-                image,
-                height: 200,
-                width: 200,
-                fit: BoxFit.cover,
-                errorBuilder: (context, error, stackTrace) {
-                  return Image.asset('assets/images/book_image_01.jpg',
-                      height: 200, width: 200, fit: BoxFit.cover);
-                },
-              ),
-            ),
-            SizedBox(height: 20),
-            Text(
-              name,
-              style: TextStyle(fontSize: 24, fontWeight: FontWeight.bold),
-            ),
-            SizedBox(height: 10),
-            Text(
-              '\$$price',
-              style: TextStyle(
-                  fontSize: 20, color: Colors.green, fontWeight: FontWeight.w600),
-            ),
-            SizedBox(height: 20),
-            Text(
-             desc,
-              style: TextStyle(fontSize: 16),
-            ),
-            Spacer(),
-            Row(
-              mainAxisAlignment: MainAxisAlignment.spaceEvenly,
-              children: [
-                ElevatedButton(
-                  onPressed: () {
-                    ScaffoldMessenger.of(context).showSnackBar(SnackBar(
-                      content: Text('$name added to cart'),
-                    ));
-                  },
-                  style: ElevatedButton.styleFrom(
-                    backgroundColor: Colors.orange, // Button color
-                    padding: EdgeInsets.symmetric(horizontal: 20, vertical: 10),
-                    textStyle: TextStyle(fontSize: 16),
-                  ),
-                  child: Text("Add to Cart"),
-                ),
-                ElevatedButton(
-                  onPressed: () {
-                    ScaffoldMessenger.of(context).showSnackBar(SnackBar(
-                      content: Text('Proceeding to buy $name'),
-                    ));
-                  },
-                  style: ElevatedButton.styleFrom(
-                    backgroundColor: Colors.green, // Button color
-                    padding: EdgeInsets.symmetric(horizontal: 20, vertical: 10),
-                    textStyle: TextStyle(fontSize: 16),
-                  ),
-                  child: Text("Buy Now"),
-                ),
-              ],
-            ),
-          ],
-        ),
-      ),
+    );
+  }
+}
+
+class BooksSection extends StatelessWidget {
+  final String category;
+
+  const BooksSection({required this.category});
+
+  @override
+  Widget build(BuildContext context) {
+    return FutureBuilder<QuerySnapshot>(
+      future: FirebaseFirestore.instance
+          .collection('books')
+          .where('category', isEqualTo: category)
+          .get(),
+      builder: (context, snapshot) {
+        if (snapshot.connectionState == ConnectionState.waiting) {
+          return Center(child: CircularProgressIndicator());
+        }
+
+        if (!snapshot.hasData || snapshot.data!.docs.isEmpty) {
+          return Center(child: Text("No books found"));
+        }
+
+        return GridView.builder(
+          shrinkWrap: true,
+          physics: NeverScrollableScrollPhysics(),
+          gridDelegate: SliverGridDelegateWithFixedCrossAxisCount(
+            crossAxisCount: 2,
+            crossAxisSpacing: 10,
+            mainAxisSpacing: 10,
+          ),
+          itemCount: snapshot.data!.docs.length,
+          itemBuilder: (context, index) {
+            final book = snapshot.data!.docs[index];
+            return ProductCard(
+              name: book['name'],
+              price: book['price'],
+              image: book['image'],
+              bookId: book.id,
+            );
+          },
+        );
+      },
     );
   }
 }
