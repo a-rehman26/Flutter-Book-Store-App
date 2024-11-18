@@ -104,7 +104,7 @@ class _WelcomePageState extends State<WelcomePage> {
       text: TextSpan(
         text: 'Book',
         style: GoogleFonts.portLligatSans(
-         // textStyle: Theme.of(context).textTheme.headline1,
+          //textStyle: Theme.of(context).textTheme.headline1,
           fontSize: 30,
           fontWeight: FontWeight.w700,
           color: Colors.white,
