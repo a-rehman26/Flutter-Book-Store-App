@@ -20,5 +20,6 @@ class MyApp extends StatelessWidget {
       home: const SplashScreen(),  // Start with the splash screen
       debugShowCheckedModeBanner: false,
     );
+
   }
 }
